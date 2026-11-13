@@ -44,20 +44,24 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          if ! git cat-file -e "HEAD:.github/ai-review/prompt.md" 2>/dev/null; then
+            echo "::notice::.github/ai-review/ is not on the base branch yet. Merge it first. AI review skipped."
+            exit 0
+          fi
           # Install outside the checkout so the PR's .npmrc doesn't apply.
           (cd "$RUNNER_TEMP" && npm install -g @anthropic-ai/claude-code@2.1.323)
           git diff "$BASE_SHA"...HEAD > "$RUNNER_TEMP/pr.diff"
           # --tools: the model gets only Read, Grep and Glob (no Bash, Edit, Write, WebFetch).
           # Prompt and schema come from the BASE commit, so the PR can't rewrite them for this run.
-          git show "$BASE_SHA:.github/ai-review/prompt.md" > "$RUNNER_TEMP/prompt.md"
-          git show "$BASE_SHA:.github/ai-review/schema.json" > "$RUNNER_TEMP/schema.json"
+          git show "HEAD:.github/ai-review/prompt.md" > "$RUNNER_TEMP/prompt.md"
+          git show "HEAD:.github/ai-review/schema.json" > "$RUNNER_TEMP/schema.json"
           claude -p "$(cat "$RUNNER_TEMP/prompt.md")" \
             --model haiku --max-budget-usd 0.50 --max-turns 8 \
             --tools Read,Grep,Glob --permission-mode default \
             --output-format json --json-schema "$(cat "$RUNNER_TEMP/schema.json")" \
             < "$RUNNER_TEMP/pr.diff" > "$RUNNER_TEMP/out.json"
           jq '.structured_output' "$RUNNER_TEMP/out.json" > review.json
-          git show "$BASE_SHA:.github/ai-review/render.jq" > "$RUNNER_TEMP/render.jq"
+          git show "HEAD:.github/ai-review/render.jq" > "$RUNNER_TEMP/render.jq"
           jq -r -f "$RUNNER_TEMP/render.jq" review.json > review.md
           cat review.md >> "$GITHUB_STEP_SUMMARY"
           echo "ran=true" >> "$GITHUB_OUTPUT"

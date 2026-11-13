@@ -1,0 +1,48 @@
+# Lesson 5.4 demo: ask GitHub's OIDC provider for a token and print its claims, the way a cloud
+# provider sees them. Prints only the decoded payload, never the token itself (a real token is a
+# credential: anyone holding it can present it to a cloud that trusts this repo, until it expires).
+# Run it with `gh workflow run oidc-claims.yml [--ref <branch>]`. The `prod` job uses the `prod`
+# environment: it waits for a reviewer and only runs from the branches its policy allows.
+name: oidc-claims
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  no-environment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+    steps:
+      - name: Request an OIDC token and print its claims
+        run: |
+          set -euo pipefail
+          token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=merge-gate-lab-demo" | jq -r .value)
+          echo "::add-mask::$token"
+          p=$(cut -d. -f2 <<<"$token" | tr '_-' '/+')
+          while (( ${#p} % 4 )); do p="$p="; done
+          base64 -d <<<"$p" | jq .
+
+  prod:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: prod
+    permissions:
+      id-token: write
+    steps:
+      - name: Request an OIDC token and print its claims
+        env:
+          DEPLOY_NOTE: ${{ secrets.DEPLOY_NOTE }}
+        run: |
+          set -euo pipefail
+          echo "environment secret DEPLOY_NOTE is ${#DEPLOY_NOTE} characters long"
+          token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=merge-gate-lab-demo" | jq -r .value)
+          echo "::add-mask::$token"
+          p=$(cut -d. -f2 <<<"$token" | tr '_-' '/+')
+          while (( ${#p} % 4 )); do p="$p="; done
+          base64 -d <<<"$p" | jq .

@@ -1,0 +1,8 @@
+# Accepted findings. Owned by the security team (CODEOWNERS /.github/).
+exceptions:
+  - id: EXC-101
+    rule: shell-command-from-request
+    path: src/server.js
+    reason: /export only runs behind the internal VPN. Rewrite to a job queue tracked in PLAT-311.
+    owner: "@Hacky-JS-gates-lab/platform"
+    expires: 2026-12-20

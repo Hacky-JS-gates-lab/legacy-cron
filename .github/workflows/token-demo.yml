@@ -1,0 +1,64 @@
+# Lesson 5.1 demo: what a GITHUB_TOKEN can and can't do. Copy it to .github/workflows/ and
+# token-probe.sh to .github/ of a lab repo, open a PR from a branch of that repo, read the
+# run log, then close the PR and clean up. Never merge it.
+# Each job's log starts with a "GITHUB_TOKEN Permissions" section listing what it got.
+name: token-demo
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  write-token:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Try six things with a write token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN: ${{ github.run_id }}-w
+        run: bash .github/token-probe.sh
+
+  read-token:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Try the same six things with a read token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN: ${{ github.run_id }}-r
+        run: bash .github/token-probe.sh
+
+  where-checkout-keeps-the-token:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Default persist-credentials (true) on purpose, to show where the token lands.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Show git's credential config, with the secret part cut off
+        run: |
+          git config --list --show-origin | grep -iE 'extraheader|includeif|credential' | sed -E 's/(basic|bearer) .*/\1 <cut>/I'
+          echo "files under RUNNER_TEMP that hold an auth header:"
+          grep -rlis 'authorization' "$RUNNER_TEMP" || true
+          echo "files in the workspace that hold an auth header:"
+          grep -rlis 'authorization' . || true

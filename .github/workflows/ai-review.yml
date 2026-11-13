@@ -9,7 +9,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 permissions: {}
 concurrency:
-  group: ai-review-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 jobs:
   review:

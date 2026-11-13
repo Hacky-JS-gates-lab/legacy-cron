@@ -1,7 +1,0 @@
-exceptions:
-  - id: EXC-007
-    rule: shell-command-from-request
-    path: src/server.js
-    reason: Export endpoint is only reachable from the VPN. Rewrite planned for Q4.
-    owner: "@Hacky-JS-gates-lab/security"
-    expires: 2026-11-12

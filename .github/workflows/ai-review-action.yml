@@ -29,13 +29,13 @@ jobs:
           if [ "$HAS_KEY" != true ]; then
             echo "::notice::No ANTHROPIC_API_KEY in this run (fork PR, Dependabot PR, or not configured). AI review skipped."
           fi
-      - if: steps.key.outputs.has == 'true'
+      - if: true # DEMO ONLY: run without a key
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
       - id: prep
-        if: steps.key.outputs.has == 'true'
+        if: true # DEMO ONLY: run without a key
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -44,7 +44,7 @@ jobs:
           git show "$BASE_SHA:.github/ai-review/render.jq" > "$RUNNER_TEMP/render.jq"
           { echo 'schema<<EOS'; git show "$BASE_SHA:.github/ai-review/schema.json"; echo EOS; } >> "$GITHUB_OUTPUT"
       - id: claude
-        if: steps.key.outputs.has == 'true'
+        if: true # DEMO ONLY: run without a key
         uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8 # v1.0.275
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
